@@ -10,6 +10,10 @@ FULL_CSV="${OUTPUT_DIR}/simplemdm_devices_full_${DATE}.csv"
 NEEDS_UPDATE_CSV="${OUTPUT_DIR}/simplemdm_devices_needing_update_${DATE}.csv"
 SUPPORTED_CSV="${OUTPUT_DIR}/simplemdm_supported_macos_models_${DATE}.csv"
 
+# Write headers to CSV files
+echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"needs_update\",\"product_name\",\"latest_compatible_os\",\"latest_compatible_os_version\"" > "$FULL_CSV"
+echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"product_name\"" >> "$NEEDS_UPDATE_CSV"
+
 # ---------- 1. FETCH SimpleMDM Device Data ----------
 echo "Fetching SimpleMDM device list..."
 response=$(curl -s -u "${API_KEY}:" "https://a.simplemdm.com/api/v1/devices")
