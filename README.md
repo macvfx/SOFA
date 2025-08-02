@@ -21,3 +21,15 @@ Downloading SOFA feed...
   → Outdated devices CSV: /Users/Shared/simplemdm_devices_needing_update_2025-07-30.csv
   → Supported macOS per model: /Users/Shared/simplemdm_supported_macos_models_2025-07-30.csv
 ✅ Export complete.
+
+## Usage
+
+Run script to cache download device list and SOFA feed
+
+*bash ./simpleMDM-devices-vs-SOFA-macOS-update-check.sh*
+
+And enter your API key.
+
+Run with "--foce" to re-download device list. Important to do this is using a different API key for different devices than already downloaded.
+
+*bash ./simpleMDM-devices-vs-SOFA-macOS-update-check.sh --force*
