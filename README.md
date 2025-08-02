@@ -30,6 +30,6 @@ Run script to cache download device list and SOFA feed
 
 And enter your API key.
 
-Run with "--foce" to re-download device list. Important to do this is using a different API key for different devices than already downloaded.
+Run with "--force" to re-download device list. Important to do this is using a different API key for different devices than already downloaded.
 
 *bash ./simpleMDM-devices-vs-SOFA-macOS-update-check.sh --force*
