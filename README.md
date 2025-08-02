@@ -5,8 +5,8 @@ Use the open source SOFA feed to check if Macs managed with simpleMDM are up to 
 
 I wrote a "simple" bash script to check SimpleMDM device list by API and check if any devices need updates and/or are compatible with the latest macOS. Of course, it will output some CSVs for fun and profit. Send to clients, managers, security professionals and be well.
 
-Note: It will output 
-1) simpleMDM device list in JSON
+Note: It will output:
+1) The full SimpleMDM device list in JSON 
 2) CSV of the full SimpleMDM device list and matches the macOS with available updates and max supported versions.
 3) CSV of just the Macs needing updates
 4) CSV of Mac models and what macOS they support
