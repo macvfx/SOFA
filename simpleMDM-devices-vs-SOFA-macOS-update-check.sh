@@ -181,8 +181,10 @@ echo "$response" | jq -c '.data[]' | while read -r device; do
 
     # Extract the 'xprotect' custom attribute value, which represents the XProtect malware definitions version on the device.
     # This is useful for security auditing and ensuring devices have up-to-date malware protection.
-    xprotect=$(echo "$device" | jq -r '.attributes.custom_attribute_values.data[]? | select(.id=="xprotect") | .attributes.value // empty')
-
+    xprotect=$(echo "$device" | jq -r '.relationships.custom_attribute_values.data[]? | select(.id=="xprotect") | .attributes.value // empty')
+    [[ -z "$xprotect" ]] && xprotect="N/A"
+    [[ "$xprotect" == "null" ]] && xprotect="N/A"
+    
     # Extract and format last_seen_at
     last_seen_at=$(echo "$device" | jq -r '.attributes.last_seen_at // empty')
     last_seen_at_fmt=""
