@@ -32,8 +32,8 @@ SUPPORTED_CSV="${OUTPUT_DIR}/simplemdm_supported_macos_models_${DATE}.csv"
 ALL_DEVICES_JSON="${OUTPUT_DIR}/simplemdm_all_devices_${DATE}.json"
 
 # headers
-echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"needs_update\",\"product_name\",\"latest_compatible_os\",\"latest_compatible_os_version\"" > "$FULL_CSV"
-echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"product_name\"" > "$NEEDS_UPDATE_CSV"
+echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"needs_update\",\"product_name\",\"latest_compatible_os\",\"latest_compatible_os_version\",\"xprotect\",\"last_seen_at\"" > "$FULL_CSV"
+echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"product_name\",\"xprotect\",\"last_seen_at\"" > "$NEEDS_UPDATE_CSV"
 
 # ---------- PRECHECK ----------
 if [[ -z "${API_KEY:-}" ]]; then
