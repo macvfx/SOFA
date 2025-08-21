@@ -179,6 +179,16 @@ echo "$response" | jq -c '.data[]' | while read -r device; do
     os_version=$(echo "$device" | jq -r '.attributes.os_version // empty')
     product_name=$(echo "$device" | jq -r '.attributes.product_name // empty')
 
+    # Extract xprotect value from custom_attribute_values
+    xprotect=$(echo "$device" | jq -r '.attributes.custom_attribute_values[]? | select(.id=="xprotect") | .attributes.value // empty')
+
+    # Extract and format last_seen_at
+    last_seen_at=$(echo "$device" | jq -r '.attributes.last_seen_at // empty')
+    last_seen_at_fmt=""
+    if [[ -n "$last_seen_at" ]]; then
+        last_seen_at_fmt=$(date -j -f "%Y-%m-%dT%H:%M:%S.%NZ" "$last_seen_at" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "$last_seen_at")
+    fi
+
     os_major=$(echo "$os_version" | cut -d'.' -f1)
     latest_major_os="${latest_os_by_major[$os_major]:-}"
 
@@ -199,10 +209,10 @@ echo "$response" | jq -c '.data[]' | while read -r device; do
         done
     fi
 
-    echo "\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_major_os\",\"$needs_update\",\"$product_name\",\"$latest_compatible_os\",\"$latest_compatible_os_version\"" >> "$FULL_CSV"
+    echo "\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_major_os\",\"$needs_update\",\"$product_name\",\"$latest_compatible_os\",\"$latest_compatible_os_version\",\"$xprotect\",\"$last_seen_at_fmt\"" >> "$FULL_CSV"
 
     if [[ "$needs_update" == "yes" ]]; then
-        echo "\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_major_os\",\"$product_name\"" >> "$NEEDS_UPDATE_CSV"
+        echo "\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_major_os\",\"$product_name\",\"$xprotect\",\"$last_seen_at_fmt\"" >> "$NEEDS_UPDATE_CSV"
     fi
 done
 
