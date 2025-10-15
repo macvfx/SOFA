@@ -241,4 +241,4 @@ echo "  → Supported macOS per model: $SUPPORTED_CSV"
 open "$FULL_CSV"
 open "$NEEDS_UPDATE_CSV"
 open "$SUPPORTED_CSV"
-echo "✅ Export
+echo "✅ Export"
