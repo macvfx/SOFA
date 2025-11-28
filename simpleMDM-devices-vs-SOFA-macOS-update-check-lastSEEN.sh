@@ -23,6 +23,9 @@ OUTPUT_DIR="/Users/Shared"
 CACHE_DIR="${OUTPUT_DIR}/API"
 mkdir -p "$CACHE_DIR"
 
+# Custom User-Agent
+user_agent="SimpleMDMExporter/1.0"
+
 SOFA_JSON="${CACHE_DIR}/macos_data_feed.json"
 CACHED_DEVICES_JSON="${CACHE_DIR}/simplemdm_all_devices_cached.json"
 FULL_CSV="${OUTPUT_DIR}/simplemdm_devices_full_${DATE}.csv"
@@ -152,7 +155,7 @@ fi
 
 if (( need_fetch_sofa == 1 )); then
     echo "Downloading SOFA feed..."
-    curl -s "https://sofafeed.macadmins.io/v1/macos_data_feed.json" -o "$SOFA_JSON"
+    curl -s "https://sofafeed.macadmins.io/v1/macos_data_feed.json" --header "User-Agent: $user_agent" -o "$SOFA_JSON"
 else
     echo "Loaded SOFA feed from cache."
 fi
