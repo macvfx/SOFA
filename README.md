@@ -133,7 +133,7 @@ Older scripts are kept in the `legacy/` folder for reference but are superseded 
 
 ## Companion App
 
-**[Simple Security Check](https://github.com/macvfx/SimpleSecurityCheck)** — a native macOS SwiftUI app that provides the same functionality with a GUI: device table with colour-coded security indicators, XProtect version monitoring, vulnerability check reports, profiles/scripts/groups browser, and CSV/JSON export.
+**Simple Security Check** — a native macOS SwiftUI app that provides the same functionality with a GUI: device table with colour-coded security indicators, XProtect version monitoring, vulnerability check reports, profiles/scripts/groups browser, and CSV/JSON export. See the [Releases](https://github.com/macvfx/SOFA/releases) section for downloads and release notes.
 
 ## Changelog
 
