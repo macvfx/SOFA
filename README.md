@@ -125,11 +125,11 @@ All exports are saved to `~/../../Shared/simpleMDM_export/` with timestamps. Fil
 
 ## Legacy Scripts
 
-The following older scripts are kept for reference but are superseded by the scripts above:
+Older scripts are kept in the `legacy/` folder for reference but are superseded by the scripts above:
 
-- `simpleMDM-devices-vs-SOFA-macOS-update-check-lastSEEN.sh` — original basic version
-- `simpleMDM-devices-vs-SOFA-macOS-update-check-fv-fw-security-review-lastSEEN.sh` — added FV/FW/SIP
-- `simpleMDM-devices-vs-SOFA-macOS-update-check-xprotect-custom-attribute.sh` — added XProtect custom attribute
+- `legacy/simpleMDM-devices-vs-SOFA-macOS-update-check-lastSEEN.sh` — original basic version
+- `legacy/simpleMDM-devices-vs-SOFA-macOS-update-check-fv-fw-security-review-lastSEEN.sh` — added FV/FW/SIP
+- `legacy/simpleMDM-devices-vs-SOFA-macOS-update-check-xprotect-custom-attribute.sh` — added XProtect custom attribute
 
 ## Companion App
 
