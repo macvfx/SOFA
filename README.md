@@ -104,9 +104,9 @@ export API_KEY="your_simplemdm_api_key"
 
 ## Output
 
-All exports are saved to `~/../../Shared/simpleMDM_export/` with timestamps. Files open automatically after export.
+All exports are saved to `/Users/Shared/simpleMDM_export/` with timestamps. Files open automatically after export.
 
-**Cache:** API responses and the SOFA feed are cached for 24 hours in `~/../../Shared/simpleMDM_export/API/`. Use `--force` to bypass the cache.
+**Cache:** API responses and the SOFA feed are cached for 24 hours in `/Users/Shared/simpleMDM_export/API/`. Use `--force` to bypass the cache.
 
 ## Troubleshooting
 
