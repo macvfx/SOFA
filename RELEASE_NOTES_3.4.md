@@ -19,5 +19,6 @@ Simple Security Check 3.4 (Build 12) can interpret an optional SimpleMDM `intel_
 - Force Refresh now bypasses and revalidates both the app's SQLite cache and the HTTP response cache so same-day SOFA updates appear immediately.
 - The Devices security and Last Seen columns now reserve enough width to keep the FileVault, XP, and optional Intel indicators visible.
 - Device Inspector now labels active SimpleMDM downloads, displays request or permission failures with Retry controls, loads custom attributes and installed apps concurrently, and distinguishes invalid Intel inventory from missing inventory.
+- Settings can now replace a rotated API key while keeping its existing alias; Keychain storage updates the saved value in place and duplicate aliases are rejected clearly.
 
 See [SimpleMDM Intel Inventory Setup](SimpleMDM-IntelInventory.md).
