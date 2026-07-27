@@ -121,6 +121,12 @@ Exports are saved to `/Users/Shared/simpleMDM_export/` with timestamps. Ordinary
 - A sensitive key inventory is always a separate, explicit, freshly fetched file.
 - API response bodies containing device keys are not retained as raw output.
 
+## Optional Intel-only Application Inventory
+
+Use [`SimpleMDM-IntelInventory.sh`](SimpleMDM-IntelInventory.sh) with a SimpleMDM `intel_inventory` custom attribute to identify applications that still require Rosetta. The versioned output includes the Intel-only app count, application names, scan time, and Mac architecture.
+
+See [SimpleMDM Intel Inventory Setup](SimpleMDM-IntelInventory.md) for configuration instructions. Simple Security Check 3.4 and later surfaces this optional data in its Devices table, Device Inspector, Compatibility Risk report, and CSV export.
+
 ## Troubleshooting
 
 **API Key Errors**
@@ -148,9 +154,11 @@ Legacy scripts are historical examples and do not implement the recovery-key pro
 
 ## Companion App
 
-**Simple Security Check 3.3 (Build 9)** — a native macOS SwiftUI app with separate FileVault encryption and key-escrow indicators, protected per-device recovery-key access, authenticated sensitive export, recovery-key-safe caching, XProtect monitoring, vulnerability reports, and SimpleMDM inventory views. See the [Releases](https://github.com/macvfx/SOFA/releases) section for downloads and release notes.
+**Simple Security Check 3.4 (Build 10)** — a native macOS SwiftUI app with FileVault escrow compliance, optional Intel-only application readiness, fleet custom attribute reporting, protected recovery-key workflows, XProtect monitoring, and vulnerability reports. See the [Releases](https://github.com/macvfx/SOFA/releases) section for downloads and release notes.
 
 ## Changelog
+
+**v3.4** — Added the optional versioned `intel_inventory` script, scan timestamps and architecture, public setup instructions, and Simple Security Check compatibility reporting guidance.
 
 **v3.3** — Added FileVault recovery-key escrow compliance. Default caches, CSVs, JSON, and response outputs remove key values. Added explicit `--include-recovery-keys` mode with fresh API fetch, `SENSITIVE_` filename, and owner-only permissions. Security reports now flag enabled FileVault without an escrowed key.
 
