@@ -7,11 +7,12 @@ set -euo pipefail
 #   - Full device CSV with all security attributes including unfixed CVE count
 #   - Devices needing update CSV
 #   - Supported macOS models CSV
-#   - Raw JSON export
+#   - Recovery-key-safe JSON export
 #
 # Usage:
-#   ./script.sh [--force]
+#   ./script.sh [--force] [--include-recovery-keys]
 #   --force : ignore cache age and re-download both SimpleMDM device list and SOFA feed
+#   --include-recovery-keys : create a separate owner-readable sensitive CSV; implies --force
 #
 # Set API_KEY env var or you will be prompted.
 
@@ -21,9 +22,20 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required. Install with: br
 
 # ---------- OPTIONS ----------
 FORCE=0
-if [[ "${1:-}" == "--force" ]]; then
-    FORCE=1
-fi
+INCLUDE_RECOVERY_KEYS=0
+for option in "$@"; do
+    case "$option" in
+        --force) FORCE=1 ;;
+        --include-recovery-keys)
+            INCLUDE_RECOVERY_KEYS=1
+            FORCE=1
+            ;;
+        *)
+            echo "ERROR: unknown option: $option" >&2
+            exit 1
+            ;;
+    esac
+done
 
 # ---------- CONFIG ----------
 API_KEY="${API_KEY:-}"
@@ -38,7 +50,7 @@ OUTPUT_DIR="/Users/Shared/simpleMDM_export"
 CACHE_DIR="${OUTPUT_DIR}/API"
 mkdir -p "$CACHE_DIR"
 
-user_agent="SimpleMDMExporter/3.1"
+user_agent="SimpleMDMExporter/3.3"
 
 SOFA_JSON="${CACHE_DIR}/macos_data_feed.json"
 CACHED_DEVICES_JSON="${CACHE_DIR}/simplemdm_all_devices_cached.json"
@@ -46,8 +58,9 @@ FULL_CSV="${OUTPUT_DIR}/simplemdm_devices_full_${DATE}.csv"
 NEEDS_UPDATE_CSV="${OUTPUT_DIR}/simplemdm_devices_needing_update_${DATE}.csv"
 SUPPORTED_CSV="${OUTPUT_DIR}/simplemdm_supported_macos_models_${DATE}.csv"
 ALL_DEVICES_JSON="${OUTPUT_DIR}/simplemdm_all_devices_${DATE}.json"
+SENSITIVE_KEYS_CSV="${OUTPUT_DIR}/SENSITIVE_simplemdm_filevault_recovery_keys_${DATE}.csv"
 
-echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"needs_update\",\"unfixed_cves\",\"xprotect_status\",\"product_name\",\"filevault_status\",\"filevault_recovery_key\",\"sip_enabled\",\"firewall_enabled\",\"latest_compatible_os\",\"latest_compatible_os_version\",\"last_seen_at\"" > "$FULL_CSV"
+echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"needs_update\",\"unfixed_cves\",\"xprotect_status\",\"product_name\",\"filevault_status\",\"filevault_key_escrowed\",\"sip_enabled\",\"firewall_enabled\",\"latest_compatible_os\",\"latest_compatible_os_version\",\"last_seen_at\"" > "$FULL_CSV"
 echo "\"name\",\"device_name\",\"serial\",\"os_version\",\"latest_major_os\",\"unfixed_cves\",\"xprotect_status\",\"upgrade_recommendation\",\"product_name\",\"filevault_status\",\"last_seen_at\"" > "$NEEDS_UPDATE_CSV"
 
 # ---------- PRECHECK ----------
@@ -134,11 +147,33 @@ if (( need_fetch_devices == 1 )); then
         ((page++))
     done
 
-    all_devices_deduped=$(echo "$all_devices" | jq 'unique_by(.id)')
+    raw_devices_deduped=$(echo "$all_devices" | jq 'unique_by(.id)')
+    all_devices_deduped=$(echo "$raw_devices_deduped" | jq 'map(if (.attributes | has("filevault_recovery_key_escrowed")) then . else .attributes.filevault_recovery_key_escrowed = (if (.attributes | has("filevault_recovery_key")) then ((.attributes.filevault_recovery_key // "") | length > 0) else null end) end | del(.attributes.filevault_recovery_key))')
     echo "{\"data\":$all_devices_deduped}" > "$CACHED_DEVICES_JSON"
+
+    if (( INCLUDE_RECOVERY_KEYS == 1 )); then
+        echo "WARNING: creating a sensitive recovery-key export with owner-only permissions."
+        (
+            umask 077
+            echo "$raw_devices_deduped" | jq -r '
+                ["name","device_name","serial","filevault_status","filevault_key_escrowed","filevault_recovery_key","last_seen_at"],
+                (.[] | [
+                    (.attributes.name // ""),
+                    (.attributes.device_name // ""),
+                    (.attributes.serial_number // ""),
+                    (if .attributes.filevault_enabled == true then "enabled" elif .attributes.filevault_enabled == false then "disabled" else "unknown" end),
+                    (if (.attributes | has("filevault_recovery_key")) then (if ((.attributes.filevault_recovery_key // "") | length) > 0 then "escrowed" else "not escrowed" end) else "unknown" end),
+                    (.attributes.filevault_recovery_key // ""),
+                    (.attributes.last_seen_at // "")
+                ]) | @csv
+            ' > "$SENSITIVE_KEYS_CSV"
+            chmod 600 "$SENSITIVE_KEYS_CSV"
+        )
+    fi
 else
     echo "Loading devices from cache."
-    all_devices_deduped=$(jq '.data' "$CACHED_DEVICES_JSON")
+    all_devices_deduped=$(jq '.data | map(if (.attributes | has("filevault_recovery_key_escrowed")) then . else .attributes.filevault_recovery_key_escrowed = (if (.attributes | has("filevault_recovery_key")) then ((.attributes.filevault_recovery_key // "") | length > 0) else null end) end | del(.attributes.filevault_recovery_key))' "$CACHED_DEVICES_JSON")
+    echo "{\"data\":$all_devices_deduped}" > "$CACHED_DEVICES_JSON"
 fi
 
 response="{\"data\":$all_devices_deduped}"
@@ -328,8 +363,8 @@ echo "$response" | jq -c '.data[]' | while read -r device; do
 
     echo "  Processing device $device_index/$total_count: $name"
 
-    filevault_status=$(echo "$device" | jq -r '.attributes.filevault_enabled // empty')
-    filevault_recovery_key=$(echo "$device" | jq -r '.attributes.filevault_recovery_key // empty')
+    filevault_status=$(echo "$device" | jq -r '.attributes.filevault_enabled | if . == null then empty else tostring end')
+    filevault_key_escrowed=$(echo "$device" | jq -r '.attributes.filevault_recovery_key_escrowed | if . == null then empty else tostring end')
     sip_enabled=$(echo "$device" | jq -r '.attributes.system_integrity_protection_enabled // empty')
     firewall_enabled=$(echo "$device" | jq -r '.attributes.firewall.enabled // empty')
 
@@ -369,7 +404,7 @@ echo "$response" | jq -c '.data[]' | while read -r device; do
         done
     fi
 
-    echo "\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_major_os\",\"$needs_update\",\"$unfixed_cves\",\"$xp_status\",\"$product_name\",\"$filevault_status\",\"$filevault_recovery_key\",\"$sip_enabled\",\"$firewall_enabled\",\"$latest_compatible_os\",\"$latest_compatible_os_version\",\"$last_seen_at_fmt\"" >> "$FULL_CSV"
+    echo "\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_major_os\",\"$needs_update\",\"$unfixed_cves\",\"$xp_status\",\"$product_name\",\"$filevault_status\",\"$filevault_key_escrowed\",\"$sip_enabled\",\"$firewall_enabled\",\"$latest_compatible_os\",\"$latest_compatible_os_version\",\"$last_seen_at_fmt\"" >> "$FULL_CSV"
 
     if [[ "$needs_update" == "yes" ]]; then
         upgrade_rec=$(get_upgrade_recommendation "$os_major" "$product_name")
@@ -402,12 +437,15 @@ for model in $product_names; do
 done
 
 # ---------- DONE ----------
-echo "$response" > "${OUTPUT_DIR}/simplemdm_raw_response_${DATE}.json"
+echo "$response" > "${OUTPUT_DIR}/simplemdm_device_response_safe_${DATE}.json"
 echo "✅ Exported:"
 echo "  → Full device CSV: $FULL_CSV"
 echo "  → Outdated devices CSV: $NEEDS_UPDATE_CSV"
 echo "  → Supported macOS per model: $SUPPORTED_CSV"
 echo "  → All devices JSON: $ALL_DEVICES_JSON"
+if (( INCLUDE_RECOVERY_KEYS == 1 )); then
+    echo "  → SENSITIVE recovery keys (mode 600): $SENSITIVE_KEYS_CSV"
+fi
 open "$FULL_CSV"
 open "$NEEDS_UPDATE_CSV"
 open "$SUPPORTED_CSV"

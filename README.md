@@ -9,14 +9,16 @@ Bash scripts that use the [SOFA feed](https://sofa.macadmins.io) to check if Mac
 
 Full device inventory and security audit. Fetches all devices from SimpleMDM with pagination, compares against the SOFA feed, checks XProtect versions via custom attributes, and exports:
 
-- **Full CSV** — every device with: name, serial, OS version, latest minor/major, update status, unfixed CVE count, XProtect status, FileVault, SIP, Firewall, recovery key, compatible OS, last seen
+- **Full CSV** — every device with FileVault encryption and recovery-key escrow as separate states; recovery-key values are excluded
 - **Needs Update CSV** — only devices behind on OS, with upgrade recommendations and XProtect status
 - **Supported Models CSV** — unique hardware models with marketing name and latest compatible macOS
-- **JSON** — complete API response
+- **JSON** — recovery-key-safe device response
 
 ```bash
-API_KEY="your-key" ./simpleMDM-devices-vs-SOFA-macOS-update-check-security-review-lastSEEN.sh [--force]
+API_KEY="your-key" ./simpleMDM-devices-vs-SOFA-macOS-update-check-security-review-lastSEEN.sh [--force] [--include-recovery-keys]
 ```
+
+Normal CSV, JSON, response, and cache files remove `filevault_recovery_key`. If an authorized administrator explicitly needs the values, `--include-recovery-keys` implies `--force` and creates a separate `SENSITIVE_simplemdm_filevault_recovery_keys_*.csv` with permissions `0600`. The sensitive file is not opened automatically.
 
 ### 2. Security Report
 **`simpleMDM-security-report.sh`**
@@ -29,6 +31,8 @@ Focused security audit that flags only devices with issues. Produces a CSV repor
 - XProtect outdated — version comparison shown (e.g., "XProtect outdated (5345 → 5347)")
 - XProtect invalid — non-numeric custom attribute value
 - FileVault disabled
+- FileVault enabled without an escrowed recovery key
+- FileVault status unknown
 - SIP disabled
 - Firewall disabled
 
@@ -104,9 +108,18 @@ export API_KEY="your_simplemdm_api_key"
 
 ## Output
 
-All exports are saved to `/Users/Shared/simpleMDM_export/` with timestamps. Files open automatically after export.
+Exports are saved to `/Users/Shared/simpleMDM_export/` with timestamps. Ordinary reports open automatically; sensitive recovery-key exports do not.
 
-**Cache:** API responses and the SOFA feed are cached for 24 hours in `/Users/Shared/simpleMDM_export/API/`. Use `--force` to bypass the cache.
+**Cache:** Recovery-key-safe API responses and the SOFA feed are cached for 24 hours in `/Users/Shared/simpleMDM_export/API/`. Existing caches are sanitized on read. Use `--force` to bypass the cache.
+
+## Recovery Key Safety
+
+- FileVault encryption and FDE recovery-key escrow are reported separately.
+- SimpleMDM does not return a separate escrow boolean: non-empty `filevault_recovery_key` is escrowed, explicit null/empty is not escrowed, and an absent field is unknown.
+- Ordinary outputs never include recovery-key values.
+- The security report flags encrypted Macs whose key is not escrowed.
+- A sensitive key inventory is always a separate, explicit, freshly fetched file.
+- API response bodies containing device keys are not retained as raw output.
 
 ## Troubleshooting
 
@@ -131,11 +144,15 @@ Older scripts are kept in the `legacy/` folder for reference but are superseded 
 - `legacy/simpleMDM-devices-vs-SOFA-macOS-update-check-fv-fw-security-review-lastSEEN.sh` — added FV/FW/SIP
 - `legacy/simpleMDM-devices-vs-SOFA-macOS-update-check-xprotect-custom-attribute.sh` — added XProtect custom attribute
 
+Legacy scripts are historical examples and do not implement the recovery-key protections in version 3.3. Do not use them for production exports.
+
 ## Companion App
 
-**Simple Security Check** — a native macOS SwiftUI app that provides the same functionality with a GUI: device table with colour-coded security indicators, XProtect version monitoring, vulnerability check reports, profiles/scripts/groups browser, and CSV/JSON export. See the [Releases](https://github.com/macvfx/SOFA/releases) section for downloads and release notes.
+**Simple Security Check 3.3 (Build 9)** — a native macOS SwiftUI app with separate FileVault encryption and key-escrow indicators, protected per-device recovery-key access, authenticated sensitive export, recovery-key-safe caching, XProtect monitoring, vulnerability reports, and SimpleMDM inventory views. See the [Releases](https://github.com/macvfx/SOFA/releases) section for downloads and release notes.
 
 ## Changelog
+
+**v3.3** — Added FileVault recovery-key escrow compliance. Default caches, CSVs, JSON, and response outputs remove key values. Added explicit `--include-recovery-keys` mode with fresh API fetch, `SENSITIVE_` filename, and owner-only permissions. Security reports now flag enabled FileVault without an escrowed key.
 
 **v3.1** — Added XProtect version checking to device and security report scripts, unfixed CVE counts, smart upgrade recommendations (only actively supported macOS versions), apps catalog script, and XProtect version check script.
 

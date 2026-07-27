@@ -7,6 +7,7 @@ set -euo pipefail
 #   - Unfixed CVEs (from SOFA SecurityReleases)
 #   - XProtect outdated (compared against SOFA feed)
 #   - FileVault disabled
+#   - FileVault enabled without an escrowed recovery key
 #   - SIP disabled
 #   - Firewall disabled
 # Recommends upgrading to actively supported macOS versions (top 2 majors).
@@ -40,7 +41,7 @@ OUTPUT_DIR="/Users/Shared/simpleMDM_export"
 CACHE_DIR="${OUTPUT_DIR}/API"
 mkdir -p "$CACHE_DIR"
 
-user_agent="SimpleMDMExporter/3.1"
+user_agent="SimpleMDMExporter/3.3"
 
 SOFA_JSON="${CACHE_DIR}/macos_data_feed.json"
 CACHED_DEVICES_JSON="${CACHE_DIR}/simplemdm_all_devices_cached.json"
@@ -126,10 +127,11 @@ if (( need_fetch_devices == 1 )); then
         ((page++))
     done
 
-    all_devices_deduped=$(echo "$all_devices" | jq 'unique_by(.id)')
+    all_devices_deduped=$(echo "$all_devices" | jq 'unique_by(.id) | map(if (.attributes | has("filevault_recovery_key_escrowed")) then . else .attributes.filevault_recovery_key_escrowed = (if (.attributes | has("filevault_recovery_key")) then ((.attributes.filevault_recovery_key // "") | length > 0) else null end) end | del(.attributes.filevault_recovery_key))')
     echo "{\"data\":$all_devices_deduped}" > "$CACHED_DEVICES_JSON"
 else
-    all_devices_deduped=$(jq '.data' "$CACHED_DEVICES_JSON")
+    all_devices_deduped=$(jq '.data | map(if (.attributes | has("filevault_recovery_key_escrowed")) then . else .attributes.filevault_recovery_key_escrowed = (if (.attributes | has("filevault_recovery_key")) then ((.attributes.filevault_recovery_key // "") | length > 0) else null end) end | del(.attributes.filevault_recovery_key))' "$CACHED_DEVICES_JSON")
+    echo "{\"data\":$all_devices_deduped}" > "$CACHED_DEVICES_JSON"
 fi
 
 total_devices=$(echo "$all_devices_deduped" | jq 'length')
@@ -321,7 +323,7 @@ get_xprotect_status() {
 }
 
 # ---------- 4. GENERATE SECURITY REPORT ----------
-echo '"name","device_name","serial","os_version","latest_minor_os","os_outdated","unfixed_cves","xprotect_status","filevault","sip","firewall","issues","product_name","last_seen_at"' > "$SECURITY_CSV"
+echo '"name","device_name","serial","os_version","latest_minor_os","os_outdated","unfixed_cves","xprotect_status","filevault","filevault_key_escrowed","sip","firewall","issues","product_name","last_seen_at"' > "$SECURITY_CSV"
 
 TMPFILE=$(mktemp)
 
@@ -334,7 +336,8 @@ echo "$all_devices_deduped" | jq -c '.[]' | while read -r device; do
     serial=$(echo "$device" | jq -r '.attributes.serial_number // empty')
     os_version=$(echo "$device" | jq -r '.attributes.os_version // empty')
     product_name=$(echo "$device" | jq -r '.attributes.product_name // empty')
-    filevault=$(echo "$device" | jq -r '.attributes.filevault_enabled // empty')
+    filevault=$(echo "$device" | jq -r '.attributes.filevault_enabled | if . == null then empty else tostring end')
+    filevault_key_escrowed=$(echo "$device" | jq -r '.attributes.filevault_recovery_key_escrowed | if . == null then empty else tostring end')
     sip=$(echo "$device" | jq -r '.attributes.system_integrity_protection_enabled // empty')
     firewall=$(echo "$device" | jq -r '.attributes.firewall.enabled // empty')
     last_seen_at=$(echo "$device" | jq -r '.attributes.last_seen_at // empty')
@@ -407,6 +410,18 @@ echo "$all_devices_deduped" | jq -c '.[]' | while read -r device; do
         [[ -n "$issues" ]] && issues="$issues; "
         issues="${issues}FileVault disabled"
         has_issue=1
+    elif [[ "$filevault" == "true" && "$filevault_key_escrowed" == "false" ]]; then
+        [[ -n "$issues" ]] && issues="$issues; "
+        issues="${issues}FileVault recovery key not escrowed"
+        has_issue=1
+    elif [[ "$filevault" == "true" && -z "$filevault_key_escrowed" ]]; then
+        [[ -n "$issues" ]] && issues="$issues; "
+        issues="${issues}FileVault key escrow status unknown"
+        has_issue=1
+    elif [[ -z "$filevault" ]]; then
+        [[ -n "$issues" ]] && issues="$issues; "
+        issues="${issues}FileVault status unknown"
+        has_issue=1
     fi
 
     if [[ "$sip" == "false" ]]; then
@@ -426,6 +441,10 @@ echo "$all_devices_deduped" | jq -c '.[]' | while read -r device; do
         [[ "$filevault" == "false" ]] && fv_status="disabled"
         [[ -z "$filevault" ]] && fv_status="unknown"
 
+        fv_escrow_status="not escrowed"
+        [[ "$filevault_key_escrowed" == "true" ]] && fv_escrow_status="escrowed"
+        [[ -z "$filevault_key_escrowed" ]] && fv_escrow_status="unknown"
+
         sip_status="enabled"
         [[ "$sip" == "false" ]] && sip_status="disabled"
         [[ -z "$sip" ]] && sip_status="unknown"
@@ -435,7 +454,7 @@ echo "$all_devices_deduped" | jq -c '.[]' | while read -r device; do
         [[ -z "$firewall" ]] && fw_status="unknown"
 
         sort_key="${last_seen_at:-0000}"
-        echo "${sort_key}|\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_minor\",\"$os_outdated\",\"$unfixed_cves\",\"$xp_csv\",\"$fv_status\",\"$sip_status\",\"$fw_status\",\"$issues\",\"$product_name\",\"$last_seen_fmt\"" >> "$TMPFILE"
+        echo "${sort_key}|\"$name\",\"$device_name\",\"$serial\",\"$os_version\",\"$latest_minor\",\"$os_outdated\",\"$unfixed_cves\",\"$xp_csv\",\"$fv_status\",\"$fv_escrow_status\",\"$sip_status\",\"$fw_status\",\"$issues\",\"$product_name\",\"$last_seen_fmt\"" >> "$TMPFILE"
     fi
 done
 
@@ -450,8 +469,11 @@ count_os_outdated=$(awk -F',' '$6 ~ /yes/' "$SECURITY_CSV" | wc -l | tr -d ' ')
 count_xp_outdated=$(awk -F',' '$8 ~ /outdated/' "$SECURITY_CSV" | wc -l | tr -d ' ')
 count_xp_invalid=$(awk -F',' '$8 ~ /invalid/' "$SECURITY_CSV" | wc -l | tr -d ' ')
 count_no_filevault=$(awk -F',' '$9 ~ /disabled/' "$SECURITY_CSV" | wc -l | tr -d ' ')
-count_no_sip=$(awk -F',' '$10 ~ /disabled/' "$SECURITY_CSV" | wc -l | tr -d ' ')
-count_no_firewall=$(awk -F',' '$11 ~ /disabled/' "$SECURITY_CSV" | wc -l | tr -d ' ')
+count_missing_filevault_key=$(awk -F',' '$9 ~ /enabled/ && $10 ~ /not escrowed/' "$SECURITY_CSV" | wc -l | tr -d ' ')
+count_unknown_filevault=$(awk -F',' '$9 ~ /unknown/' "$SECURITY_CSV" | wc -l | tr -d ' ')
+count_unknown_filevault_key=$(awk -F',' '$9 ~ /enabled/ && $10 ~ /unknown/' "$SECURITY_CSV" | wc -l | tr -d ' ')
+count_no_sip=$(awk -F',' '$11 ~ /disabled/' "$SECURITY_CSV" | wc -l | tr -d ' ')
+count_no_firewall=$(awk -F',' '$12 ~ /disabled/' "$SECURITY_CSV" | wc -l | tr -d ' ')
 count_with_unfixed_cves=$(awk -F',' '$7 > 0' "$SECURITY_CSV" | wc -l | tr -d ' ')
 
 cat <<EOF > "$SECURITY_SUMMARY"
@@ -472,6 +494,9 @@ Issue Breakdown:
   XProtect outdated:      $count_xp_outdated
   XProtect invalid:       $count_xp_invalid
   FileVault disabled:     $count_no_filevault
+  FileVault key missing:  $count_missing_filevault_key
+  FileVault unknown:      $count_unknown_filevault
+  Key escrow unknown:     $count_unknown_filevault_key
   SIP disabled:           $count_no_sip
   Firewall disabled:      $count_no_firewall
 
