@@ -154,7 +154,7 @@ Legacy scripts are historical examples and do not implement the recovery-key pro
 
 ## Companion App
 
-**Simple Security Check 3.4 (Build 11)** — a native macOS SwiftUI app with FileVault escrow compliance, optional Intel-only application readiness, fleet custom attribute reporting, protected recovery-key workflows, XProtect monitoring, and vulnerability reports. See the [Releases](https://github.com/macvfx/SOFA/releases) section for downloads and release notes.
+**Simple Security Check 3.4 (Build 12)** — a native macOS SwiftUI app with FileVault escrow compliance, optional Intel-only application readiness, fleet custom attribute reporting, protected recovery-key workflows, XProtect monitoring, and vulnerability reports. See the [Releases](https://github.com/macvfx/SOFA/releases) section for downloads and release notes.
 
 ## Changelog
 
