@@ -20,5 +20,6 @@ Simple Security Check 3.4 (Build 12) can interpret an optional SimpleMDM `intel_
 - The Devices security and Last Seen columns now reserve enough width to keep the FileVault, XP, and optional Intel indicators visible.
 - Device Inspector now labels active SimpleMDM downloads, displays request or permission failures with Retry controls, loads custom attributes and installed apps concurrently, and distinguishes invalid Intel inventory from missing inventory.
 - Settings can now replace a rotated API key while keeping its existing alias; Keychain storage updates the saved value in place and duplicate aliases are rejected clearly.
+- The private app test suite now contains 15 regression tests covering Intel parsing, Demo Mode fixtures, SOFA cache policy, and same-alias Keychain replacement.
 
 See [SimpleMDM Intel Inventory Setup](SimpleMDM-IntelInventory.md).
